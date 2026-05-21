@@ -1,9 +1,37 @@
-import { useState } from "react";
+import { useState, useContext } from "react";
 import { Lock, Eye, EyeOff, Mail, Droplets } from "lucide-react";
 import loginImage from "../assets/stockimage.webp";
+import { useNavigate } from "react-router-dom";
+import { useForm } from "react-hook-form";
+import { UserContext } from "../context/UserContext";
+import { logIn } from "../helpers/auth";
 
 const LoginScreen = () => {
   const [showPassword, setShowPassword] = useState(false);
+
+  const { loadUserData } = useContext(UserContext);
+
+  const navigate = useNavigate();
+
+  const [response, setResponse] = useState(null);
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm();
+
+  const onSubmit = async (data) => {
+    const response = await logIn(data.email, data.password);
+
+    setResponse(response);
+
+    if (response.ok) {
+      await loadUserData();
+
+      navigate("/");
+    }
+  };
 
   return (
     <div className="min-h-screen flex flex-col lg:flex-row">
@@ -49,11 +77,23 @@ const LoginScreen = () => {
             Iniciar sesión
           </h2>
 
-          <p className="text-gray-500 mb-10">
-            Ingresa tus credenciales para acceder al panel.
-          </p>
+          <div className="mb-10 flex items-center gap-3 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3">
+            <div className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" />
 
-          <form className="space-y-6">
+            <p className="text-sm text-blue-800 font-medium">
+              Ingresa tus credenciales para acceder al panel.
+            </p>
+          </div>
+
+          {response && !response.ok && (
+            <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3">
+              <p className="text-sm text-red-700">
+                {response.message || "Credenciales incorrectas"}
+              </p>
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Correo electrónico
@@ -63,7 +103,19 @@ const LoginScreen = () => {
                 <input
                   type="email"
                   placeholder="ejemplo@correo.com"
-                  className="w-full h-14 rounded-2xl bg-white border border-gray-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 outline-none px-12 text-gray-700 transition-all"
+                  className={`w-full h-14 rounded-2xl bg-white border outline-none px-12 text-gray-700 transition-all
+                  ${
+                    errors.email
+                      ? "border-red-400 focus:ring-red-100"
+                      : "border-gray-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                  }`}
+                  {...register("email", {
+                    required: "El correo es obligatorio",
+                    pattern: {
+                      value: /^\S+@\S+$/i,
+                      message: "Correo inválido",
+                    },
+                  })}
                 />
 
                 <Mail
@@ -71,6 +123,12 @@ const LoginScreen = () => {
                   className="text-gray-400 absolute left-4 top-1/2 -translate-y-1/2"
                 />
               </div>
+
+              {errors.email && (
+                <p className="mt-2 text-sm text-red-500">
+                  {errors.email.message}
+                </p>
+              )}
             </div>
 
             <div>
@@ -82,7 +140,16 @@ const LoginScreen = () => {
                 <input
                   type={showPassword ? "text" : "password"}
                   placeholder="••••••••"
-                  className="w-full h-14 rounded-2xl bg-white border border-gray-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 outline-none px-12 pr-12 text-gray-700 transition-all"
+                  className={`w-full h-14 rounded-2xl bg-white border outline-none px-12 pr-12 text-gray-700 transition-all
+                  ${
+                    errors.password
+                      ? "border-red-400 focus:ring-red-100"
+                      : "border-gray-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                  }`}
+                  {...register("password", {
+                    required: "La contraseña es obligatoria",
+                   
+                  })}
                 />
 
                 <Lock
@@ -98,13 +165,20 @@ const LoginScreen = () => {
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
               </div>
+
+              {errors.password && (
+                <p className="mt-2 text-sm text-red-500">
+                  {errors.password.message}
+                </p>
+              )}
             </div>
 
             <button
               type="submit"
-              className="w-full h-14 rounded-2xl cursor-pointer bg-blue-500 hover:bg-blue-600 transition-all text-white font-medium shadow-lg shadow-blue-500/20"
+              disabled={isSubmitting}
+              className="w-full h-14 rounded-2xl cursor-pointer bg-blue-500 hover:bg-blue-600 transition-all text-white font-medium shadow-lg shadow-blue-500/20 disabled:opacity-70"
             >
-              Ingresar al sistema
+              {isSubmitting ? "Ingresando..." : "Ingresar al sistema"}
             </button>
           </form>
         </div>
