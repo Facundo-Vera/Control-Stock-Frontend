@@ -2,7 +2,8 @@ const url = import.meta.env.VITE_API_URL;
 
 
 const logIn = async (email, password) => {
-  const response = await fetch(url + "login", {
+  const apiUrl = url.endsWith("/") ? `${url}login` : `${url}/login`;
+  const response = await fetch(apiUrl, {
     method: "POST",
      credentials: "include",
     headers: {
