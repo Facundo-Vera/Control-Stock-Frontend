@@ -2,34 +2,32 @@ import React, { useState, useEffect, useContext } from "react";
 import { Link } from "react-router-dom";
 import { UserContext } from "../context/UserContext";
 import { fetchProducts, fetchSales } from "../helpers/api";
-import { 
-  DollarSign, 
-  Package, 
-  AlertTriangle, 
-  Droplet, 
-  Filter, 
-  Layers, 
-  TrendingUp, 
-  ChevronRight 
+import {
+  DollarSign,
+  Package,
+  AlertTriangle,
+  Droplet,
+  Filter,
+  Layers,
+  TrendingUp,
+  ChevronRight,
 } from "lucide-react";
 
 const Dashboard = () => {
   const { user } = useContext(UserContext);
-  
-  // State for backend data
+
   const [products, setProducts] = useState([]);
   const [sales, setSales] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [chartTab, setChartTab] = useState("This Week"); // "This Week" or "Last Week"
+  const [chartTab, setChartTab] = useState("This Week");
 
-  // Load data from backend on mount
   useEffect(() => {
     const loadDashboardData = async () => {
       try {
         setLoading(true);
         const productsRes = await fetchProducts();
         const salesRes = await fetchSales();
-        
+
         if (productsRes.ok) {
           setProducts(productsRes.products || []);
         }
@@ -46,86 +44,86 @@ const Dashboard = () => {
     loadDashboardData();
   }, []);
 
-  // 1. Calculate values for Summary Cards
-  // Total Products
-  const totalProducts = products.length > 0 ? products.length : 482; // Fallback to mockup value
+  const totalProducts = products.length > 0 ? products.length : 482;
 
-  // Low Stock Items (Threshold: stock <= stockMin, fallback to <= 5)
   const lowStockProducts = products.filter(
-    (p) => p.stock <= (p.stockMin || 5) && p.active !== false
+    (p) => p.stock <= (p.stockMin || 5) && p.active !== false,
   );
-  
-  const lowStockCount = products.length > 0 ? lowStockProducts.length : 12; // Fallback to mockup value
 
-  // Today's Sales
+  const lowStockCount = products.length > 0 ? lowStockProducts.length : 12;
+
   const getTodaySalesSum = () => {
-    if (sales.length === 0) return 1245.00; // Fallback to mockup value
-    
+    if (sales.length === 0) return 1245.0;
+
     const today = new Date().toDateString();
     const todaySales = sales.filter((s) => {
       const saleDate = new Date(s.date || s.createdAt);
       return saleDate.toDateString() === today;
     });
 
-    if (todaySales.length === 0) return 0.00;
+    if (todaySales.length === 0) return 0.0;
     return todaySales.reduce((sum, s) => sum + (s.totalAmount || 0), 0);
   };
-  
+
   const todaySalesSum = getTodaySalesSum();
 
-  // 2. Prepare Low Stock Alerts List
-  // We show up to 3 alerts. If backend has none, we show the mock alerts from the mockup.
   const getAlertsList = () => {
     if (products.length === 0 || lowStockProducts.length === 0) {
-      // Mock alerts exactly matching mockup
       return [
         {
           _id: "mock-1",
           name: "Motul 5100 10W40",
-          categoryName: "Motorcycle Oil",
+          categoryName: "Moto",
           stock: 2,
-          type: "oil"
+          type: "oil",
         },
         {
           _id: "mock-2",
           name: "Bosch Oil Filter",
-          categoryName: "Car Filter",
+          categoryName: "Auto",
           stock: 5,
-          type: "filter"
+          type: "filter",
         },
         {
           _id: "mock-3",
           name: "YPF Elaion 5W30",
-          categoryName: "Car Oil",
+          categoryName: "Auto",
           stock: 4,
-          type: "oil"
-        }
+          type: "oil",
+        },
       ];
     }
 
     return lowStockProducts.slice(0, 3).map((p) => {
-      // Deduce type for icon
       const nameLower = p.name.toLowerCase();
       let type = "generic";
-      if (nameLower.includes("aceite") || nameLower.includes("oil") || nameLower.includes("motul") || nameLower.includes("elaion")) {
+      if (
+        nameLower.includes("aceite") ||
+        nameLower.includes("oil") ||
+        nameLower.includes("motul") ||
+        nameLower.includes("elaion")
+      ) {
         type = "oil";
-      } else if (nameLower.includes("filtro") || nameLower.includes("filter") || nameLower.includes("bosch")) {
+      } else if (
+        nameLower.includes("filtro") ||
+        nameLower.includes("filter") ||
+        nameLower.includes("bosch")
+      ) {
         type = "filter";
       }
-      
+
       return {
         _id: p._id,
         name: p.name,
         categoryName: p.category?.name || "Repuesto",
         stock: p.stock,
-        type: type
+        type: type,
       };
     });
   };
 
   const alerts = getAlertsList();
 
-  // 3. Mock Data for Sales Chart
   const chartData = {
     "This Week": [
       { day: "Mon", amount: 150 },
@@ -134,7 +132,7 @@ const Dashboard = () => {
       { day: "Thu", amount: 490 },
       { day: "Fri", amount: 280 },
       { day: "Sat", amount: 590 },
-      { day: "Sun", amount: 420 }
+      { day: "Sun", amount: 420 },
     ],
     "Last Week": [
       { day: "Mon", amount: 280 },
@@ -143,20 +141,16 @@ const Dashboard = () => {
       { day: "Thu", amount: 320 },
       { day: "Fri", amount: 510 },
       { day: "Sat", amount: 390 },
-      { day: "Sun", amount: 220 }
-    ]
+      { day: "Sun", amount: 220 },
+    ],
   };
 
   const activePoints = chartData[chartTab];
-  
-  // Calculate SVG curved line path (Cubic Bezier)
-  // ViewBox: 0 0 600 200
-  // X coords: 40, 130, 220, 310, 400, 490, 580
-  // Y coords: mapped from 0-700 amount to 170-30 range
+
   const getSvgCoordinates = () => {
     return activePoints.map((pt, index) => {
       const x = 40 + index * 90;
-      // Map amount (0 to 700) to Y (170 down to 25)
+
       const y = 170 - (pt.amount / 700) * 145;
       return { x, y, pt };
     });
@@ -164,7 +158,6 @@ const Dashboard = () => {
 
   const coords = getSvgCoordinates();
 
-  // Build SVG path string with smooth curves (using Cubic Bezier control points)
   const getCurvePath = () => {
     let path = `M ${coords[0].x} ${coords[0].y}`;
     for (let i = 0; i < coords.length - 1; i++) {
@@ -179,7 +172,6 @@ const Dashboard = () => {
     return path;
   };
 
-  // Build SVG area path that goes back to bottom (for gradient fill)
   const getAreaPath = () => {
     const curve = getCurvePath();
     return `${curve} L ${coords[coords.length - 1].x} 170 L ${coords[0].x} 170 Z`;
@@ -187,7 +179,6 @@ const Dashboard = () => {
 
   return (
     <div className="p-8 bg-[#f8fafc] min-h-screen space-y-8">
-      {/* Top Header Row */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
@@ -203,9 +194,7 @@ const Dashboard = () => {
         </div>
       ) : (
         <>
-          {/* Summary Cards Row */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {/* Total Sales Today Card */}
             <div className="bg-white p-6 rounded-3xl border border-gray-100/80 shadow-sm flex flex-col justify-between min-h-[160px]">
               <div className="flex items-center justify-between">
                 <div className="w-12 h-12 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-500">
@@ -217,14 +206,19 @@ const Dashboard = () => {
                 </span>
               </div>
               <div className="mt-4">
-                <p className="text-sm font-medium text-gray-400">Total Sales Today</p>
+                <p className="text-sm font-medium text-gray-400">
+        Ventas totales hoy
+                </p>
                 <p className="text-3xl font-bold text-gray-900 mt-1">
-                  ${todaySalesSum.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  $
+                  {todaySalesSum.toLocaleString("en-US", {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
                 </p>
               </div>
             </div>
 
-            {/* Total Products Card */}
             <div className="bg-white p-6 rounded-3xl border border-gray-100/80 shadow-sm flex flex-col justify-between min-h-[160px]">
               <div className="flex items-center justify-between">
                 <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center text-blue-500">
@@ -232,34 +226,41 @@ const Dashboard = () => {
                 </div>
               </div>
               <div className="mt-4">
-                <p className="text-sm font-medium text-gray-400">Total Products</p>
-                <p className="text-3xl font-bold text-gray-900 mt-1">{totalProducts}</p>
+                <p className="text-sm font-medium text-gray-400">
+                  Productos Totales
+                </p>
+                <p className="text-3xl font-bold text-gray-900 mt-1">
+                  {totalProducts}
+                </p>
               </div>
             </div>
 
-            {/* Low Stock Items Card */}
             <div className="bg-white p-6 rounded-3xl border border-gray-100/80 shadow-sm flex flex-col justify-between min-h-[160px]">
               <div className="flex items-center justify-between">
                 <div className="w-12 h-12 rounded-full bg-red-50 flex items-center justify-center text-red-500">
                   <AlertTriangle size={24} />
                 </div>
                 <span className="bg-red-50 text-red-600 text-xs font-semibold px-2.5 py-1 rounded-full">
-                  ! Action Needed
+                  ! Se requiere acción
                 </span>
               </div>
               <div className="mt-4">
-                <p className="text-sm font-medium text-gray-400">Low Stock Items</p>
-                <p className="text-3xl font-bold text-gray-900 mt-1">{lowStockCount}</p>
+                <p className="text-sm font-medium text-gray-400">
+                  Items con Bajo Stock
+                </p>
+                <p className="text-3xl font-bold text-gray-900 mt-1">
+                  {lowStockCount}
+                </p>
               </div>
             </div>
           </div>
 
-          {/* Bottom Grid: Chart & Alerts */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Sales Overview Chart (takes 2 cols) */}
             <div className="lg:col-span-2 bg-white p-6 rounded-3xl border border-gray-100/80 shadow-sm flex flex-col justify-between">
               <div className="flex items-center justify-between mb-6">
-                <h3 className="text-xl font-bold text-gray-900">Sales Overview</h3>
+                <h3 className="text-xl font-bold text-gray-900">
+                 Resumen de ventas
+                </h3>
                 <div className="flex bg-gray-50 border border-gray-100 rounded-xl p-1">
                   <button
                     onClick={() => setChartTab("This Week")}
@@ -269,7 +270,7 @@ const Dashboard = () => {
                         : "text-gray-500 hover:text-gray-900"
                     }`}
                   >
-                    This Week
+                   Esta semana
                   </button>
                   <button
                     onClick={() => setChartTab("Last Week")}
@@ -279,31 +280,66 @@ const Dashboard = () => {
                         : "text-gray-500 hover:text-gray-900"
                     }`}
                   >
-                    Last Week
+                   La semana pasada
                   </button>
                 </div>
               </div>
 
-              {/* Chart SVG */}
               <div className="relative w-full h-[220px] flex items-end">
-                <svg viewBox="0 0 620 190" className="w-full h-[195px] overflow-visible">
+                <svg
+                  viewBox="0 0 620 190"
+                  className="w-full h-[195px] overflow-visible"
+                >
                   <defs>
                     <linearGradient id="chartGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.25" />
-                      <stop offset="100%" stopColor="#3b82f6" stopOpacity="0.0" />
+                      <stop
+                        offset="0%"
+                        stopColor="#3b82f6"
+                        stopOpacity="0.25"
+                      />
+                      <stop
+                        offset="100%"
+                        stopColor="#3b82f6"
+                        stopOpacity="0.0"
+                      />
                     </linearGradient>
                   </defs>
 
-                  {/* Horizontal gridlines */}
-                  <line x1="20" y1="25" x2="600" y2="25" stroke="#f1f5f9" strokeDasharray="4" />
-                  <line x1="20" y1="73" x2="600" y2="73" stroke="#f1f5f9" strokeDasharray="4" />
-                  <line x1="20" y1="121" x2="600" y2="121" stroke="#f1f5f9" strokeDasharray="4" />
-                  <line x1="20" y1="170" x2="600" y2="170" stroke="#e2e8f0" strokeWidth="1.5" />
+                  <line
+                    x1="20"
+                    y1="25"
+                    x2="600"
+                    y2="25"
+                    stroke="#f1f5f9"
+                    strokeDasharray="4"
+                  />
+                  <line
+                    x1="20"
+                    y1="73"
+                    x2="600"
+                    y2="73"
+                    stroke="#f1f5f9"
+                    strokeDasharray="4"
+                  />
+                  <line
+                    x1="20"
+                    y1="121"
+                    x2="600"
+                    y2="121"
+                    stroke="#f1f5f9"
+                    strokeDasharray="4"
+                  />
+                  <line
+                    x1="20"
+                    y1="170"
+                    x2="600"
+                    y2="170"
+                    stroke="#e2e8f0"
+                    strokeWidth="1.5"
+                  />
 
-                  {/* Gradient Area Fill */}
                   <path d={getAreaPath()} fill="url(#chartGrad)" />
 
-                  {/* The Main Line */}
                   <path
                     d={getCurvePath()}
                     fill="none"
@@ -312,7 +348,6 @@ const Dashboard = () => {
                     strokeLinecap="round"
                   />
 
-                  {/* Highlight dots on points */}
                   {coords.map((c, i) => (
                     <g key={i} className="group cursor-pointer">
                       <circle
@@ -324,7 +359,7 @@ const Dashboard = () => {
                         strokeWidth="3"
                         className="transition-all duration-150 hover:r-7"
                       />
-                      {/* Faint indicator vertical line */}
+
                       <line
                         x1={c.x}
                         y1={c.y + 5}
@@ -335,7 +370,7 @@ const Dashboard = () => {
                         strokeDasharray="2"
                         className="opacity-0 group-hover:opacity-30 transition-opacity duration-150"
                       />
-                      {/* Faint tooltip */}
+
                       <g className="opacity-0 group-hover:opacity-100 transition-opacity duration-150 pointer-events-none">
                         <rect
                           x={c.x - 30}
@@ -361,32 +396,40 @@ const Dashboard = () => {
                 </svg>
               </div>
 
-              {/* X Axis Labels */}
               <div className="flex justify-between px-6 pt-3 border-t border-gray-50 mt-1">
                 {activePoints.map((pt, i) => (
-                  <span key={i} className="text-xs font-semibold text-gray-400 w-12 text-center">
+                  <span
+                    key={i}
+                    className="text-xs font-semibold text-gray-400 w-12 text-center"
+                  >
                     {pt.day}
                   </span>
                 ))}
               </div>
             </div>
 
-            {/* Low Stock Alerts (takes 1 col) */}
             <div className="bg-white p-6 rounded-3xl border border-gray-100/80 shadow-sm flex flex-col justify-between min-h-[360px]">
               <div>
-                <h3 className="text-xl font-bold text-gray-900 mb-6">Low Stock Alerts</h3>
-                
+                <h3 className="text-xl font-bold text-gray-900 mb-6">
+                 Alertas de bajo stock
+                </h3>
+
                 <div className="space-y-5">
                   {alerts.map((item) => (
-                    <div key={item._id} className="flex items-center justify-between pb-4 border-b border-gray-50 last:border-0 last:pb-0">
+                    <div
+                      key={item._id}
+                      className="flex items-center justify-between pb-4 border-b border-gray-50 last:border-0 last:pb-0"
+                    >
                       <div className="flex items-center gap-3">
-                        <div className={`w-11 h-11 rounded-xl flex items-center justify-center ${
-                          item.type === "oil" 
-                            ? "bg-amber-50 text-amber-500" 
-                            : item.type === "filter" 
-                            ? "bg-blue-50 text-blue-500" 
-                            : "bg-slate-50 text-slate-400"
-                        }`}>
+                        <div
+                          className={`w-11 h-11 rounded-xl flex items-center justify-center ${
+                            item.type === "oil"
+                              ? "bg-amber-50 text-amber-500"
+                              : item.type === "filter"
+                                ? "bg-blue-50 text-blue-500"
+                                : "bg-slate-50 text-slate-400"
+                          }`}
+                        >
                           {item.type === "oil" ? (
                             <Droplet size={20} />
                           ) : item.type === "filter" ? (
@@ -396,8 +439,12 @@ const Dashboard = () => {
                           )}
                         </div>
                         <div>
-                          <p className="text-sm font-semibold text-gray-900">{item.name}</p>
-                          <p className="text-xs text-gray-400 mt-0.5">{item.categoryName}</p>
+                          <p className="text-sm font-semibold text-gray-900">
+                            {item.name}
+                          </p>
+                          <p className="text-xs text-gray-400 mt-0.5">
+                            {item.categoryName}
+                          </p>
                         </div>
                       </div>
                       <span className="bg-red-50 text-red-600 text-xs font-bold px-3 py-1 rounded-full whitespace-nowrap">
@@ -409,11 +456,11 @@ const Dashboard = () => {
               </div>
 
               <div className="pt-6 border-t border-gray-50 flex justify-center">
-                <Link 
-                  to="/stock" 
+                <Link
+                  to="/stock"
                   className="text-sm font-bold text-blue-600 hover:text-blue-700 transition-colors flex items-center gap-1.5"
                 >
-                  View all alerts
+                  Ver todas las alertas
                   <ChevronRight size={16} />
                 </Link>
               </div>
